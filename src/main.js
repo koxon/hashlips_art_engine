@@ -1,6 +1,7 @@
 const basePath = process.cwd();
 const { NETWORK } = require(`${basePath}/constants/network.js`);
 const fs = require("fs");
+const { nextTick } = require("process");
 const sha1 = require(`${basePath}/node_modules/sha1`);
 const { createCanvas, loadImage } = require(`${basePath}/node_modules/canvas`);
 const buildDir = `${basePath}/build`;
@@ -28,6 +29,8 @@ ctx.imageSmoothingEnabled = format.smoothing;
 var metadataList = [];
 var attributesList = [];
 var dnaList = new Set();
+var denyList = {};
+var allowList = {};
 const DNA_DELIMITER = "-";
 const HashlipsGiffer = require(`${basePath}/modules/HashlipsGiffer.js`);
 
@@ -76,9 +79,19 @@ const getElements = (path) => {
       if (i.includes("-")) {
         throw new Error(`layer name can not contain dashes, please fix: ${i}`);
       }
+
+      // @ is a delimiter in our conditionnal format.
+      let fileParts = i.split("@");
+      // We remove the extension and rarity at the end
+      fileParts[fileParts.length-1] = fileParts[fileParts.length-1].split("#")[0]; 
+
       return {
         id: index,
-        name: cleanName(i),
+        fileParts: fileParts,
+        fileId: fileParts[1],
+        denies: fileParts[2],
+        allows: fileParts[3],
+        name: fileParts[0],
         filename: i,
         path: `${path}${i}`,
         weight: getRarityWeight(i),
@@ -94,6 +107,10 @@ const layersSetup = (layersOrder) => {
       layerObj.options?.["displayName"] != undefined
         ? layerObj.options?.["displayName"]
         : layerObj.name,
+    type:
+      layerObj.options?.["type"] != undefined
+        ? layerObj.options?.["type"]
+        : layerObj.type,
     blend:
       layerObj.options?.["blend"] != undefined
         ? layerObj.options?.["blend"]
@@ -226,6 +243,11 @@ const constructLayerToDna = (_dna = "", _layers = []) => {
     );
     return {
       name: layer.name,
+      fileParts: layer.fileParts,
+      fileId: layer.fileId,
+      denies: layer.denies,
+      allows: layer.allows,
+      type: layer.type,
       blend: layer.blend,
       opacity: layer.opacity,
       selectedElement: selectedElement,
@@ -363,10 +385,24 @@ const startCreating = async () => {
       if (isDnaUnique(dnaList, newDna)) {
         let results = constructLayerToDna(newDna, layers);
         let loadedElements = [];
+        let types = {};
 
         results.forEach((layer) => {
+          if (types[layer.type] == 1) {
+            // console.log("ignore");
+            // console.log(layer);
+            return;
+          }
+          console.log(layer);
+
+          if (layer.selectedElement.name != 'none') {
+            types[layer.type] = 1;
+          }
           loadedElements.push(loadLayerImg(layer));
+
         });
+
+        console.log(types);
 
         await Promise.all(loadedElements).then((renderObjectArray) => {
           debugLogs ? console.log("Clearing canvas") : null;

@@ -5,9 +5,9 @@ const { NETWORK } = require(`${basePath}/constants/network.js`);
 const network = NETWORK.eth;
 
 // General metadata for Ethereum
-const namePrefix = "Your Collection";
-const description = "Remember to replace this description";
-const baseUri = "ipfs://NewUriToReplace";
+const namePrefix = "Fry Heads";
+const description = "Fries from another universe";
+const baseUri = "ipfs://QmXgGkWXWoFADKfoNc1S48Z6hRqJrRBcBNVabTSCd66gSR";
 
 const solanaMetadata = {
   symbol: "YC",
@@ -24,22 +24,113 @@ const solanaMetadata = {
 // If you have selected Solana then the collection starts from 0 automatically
 const layerConfigurations = [
   {
-    growEditionSizeTo: 5,
+    growEditionSizeTo: 50,
     layersOrder: [
-      { name: "Background" },
-      { name: "Eyeball" },
-      { name: "Eye color" },
-      { name: "Iris" },
-      { name: "Shine" },
-      { name: "Bottom lid" },
-      { name: "Top lid" },
+      { name: "16 Background",
+        type: "Background", 
+        options: {
+          displayName: "Background",
+          bypassDNA: true
+        }
+      },
+      { name: "15 Body",
+        type: "Body", 
+        options: {
+          displayName: "Body",
+          bypassDNA: true
+        }
+      },
+      { name: "14 Clothes",
+        type: "Clothes", 
+        options: {
+          displayName: "Clothes",
+        }
+      },
+      { name: "13 Eye Under Hat",
+        type: "Eye", 
+        options: {
+          displayName: "Eyes Under Hat",
+        }
+      },
+      { name: "12 Mouth Under Hat",
+        type: "Mouth", 
+        options: {
+          displayName: "Mouth Under Hat",
+        }
+      },
+      { name: "11 Hat Without ears & hat",
+        type: "Hat", 
+        options: {
+          displayName: "Hat Without Ears & Tops",
+        }
+      },
+      { name: "10 Hair With hat",
+        type: "Hat", 
+        options: {
+          displayName: "Hair With Hat",
+        }
+      },
+      { name: "09 Hat",
+        type: "Hat", 
+        options: {
+          displayName: "Hat",
+        }
+      },
+      { name: "08 Mouth",
+        type: "Mouth", 
+        options: {
+          displayName: "Mouth",
+        }
+      },
+      { name: "07 Mustache",
+        type: "Mustache", 
+        options: {
+          displayName: "Mustache",
+        }
+      },
+      { name: "06 Eye",
+        type: "Eye", 
+        options: {
+          displayName: "Eye",
+        }
+      },
+      { name: "05 Ear",
+        type: "Ear", 
+        options: {
+          displayName: "Ear",
+        }
+      },
+      { name: "04 Eye Glasses",
+        type: "Eye", 
+        options: {
+          displayName: "Eye Glasses",
+        }
+      },
+      { name: "03 Hat Cap",
+        type: "Hat", 
+        options: {
+          displayName: "Cap",
+        }
+      },
+      { name: "02 Nose",
+        type: "Nose", 
+        options: {
+          displayName: "Noze",
+        }
+      },
+      { name: "01 Hat Helmet",
+        type: "Hat", 
+        options: {
+          displayName: "Helmet",
+        }
+      },
     ],
   },
 ];
 
 const shuffleLayerConfigurations = false;
 
-const debugLogs = false;
+const debugLogs = true;
 
 const format = {
   width: 512,
@@ -68,7 +159,7 @@ const text = {
 };
 
 const pixelFormat = {
-  ratio: 2 / 128,
+  ratio: 5 / 128,
 };
 
 const background = {
@@ -78,7 +169,9 @@ const background = {
   default: "#000000",
 };
 
-const extraMetadata = {};
+const extraMetadata = {
+  external_url: "https://stickhumans.com"
+};
 
 const rarityDelimiter = "#";
 
