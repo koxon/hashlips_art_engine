@@ -6,7 +6,7 @@ const network = NETWORK.eth;
 
 // General metadata for Ethereum
 const namePrefix = "Fry Heads";
-const description = "Fries from another universe";
+const description = "Fries in a parallel universe";
 const baseUri = "ipfs://QmXgGkWXWoFADKfoNc1S48Z6hRqJrRBcBNVabTSCd66gSR";
 
 const solanaMetadata = {
@@ -24,7 +24,7 @@ const solanaMetadata = {
 // If you have selected Solana then the collection starts from 0 automatically
 const layerConfigurations = [
   {
-    growEditionSizeTo: 50,
+    growEditionSizeTo: 300,
     layersOrder: [
       { name: "16 Background",
         type: "Background", 
@@ -46,28 +46,28 @@ const layerConfigurations = [
           displayName: "Clothes",
         }
       },
-      { name: "13 Eye Under Hat",
+      { name: "13 Eye - Under Hat",
         type: "Eye", 
         options: {
-          displayName: "Eyes Under Hat",
+          displayName: "Special Eyes",
         }
       },
-      { name: "12 Mouth Under Hat",
+      { name: "12 Mouth - Under Hat",
         type: "Mouth", 
         options: {
-          displayName: "Mouth Under Hat",
+          displayName: "Special Mouth",
         }
       },
-      { name: "11 Hat Without ears & hat",
-        type: "Hat", 
+      { name: "11 Hat & Eye - Without Ears & Hat & nose",
+        type: "Hat,Eye", 
         options: {
-          displayName: "Hat Without Ears & Tops",
+          displayName: "Special Hat",
         }
       },
-      { name: "10 Hair With hat",
+      { name: "10 Hat - With Hair",
         type: "Hat", 
         options: {
-          displayName: "Hair With Hat",
+          displayName: "Special Hair",
         }
       },
       { name: "09 Hat",
@@ -76,28 +76,28 @@ const layerConfigurations = [
           displayName: "Hat",
         }
       },
-      { name: "08 Mouth",
+      { name: "08 Ear",
+        type: "Ear", 
+        options: {
+          displayName: "Ear",
+        }
+      },
+      { name: "07 Mouth",
         type: "Mouth", 
         options: {
           displayName: "Mouth",
         }
       },
-      { name: "07 Mustache",
+      { name: "06 Mustache",
         type: "Mustache", 
         options: {
           displayName: "Mustache",
         }
       },
-      { name: "06 Eye",
+      { name: "05 Eye",
         type: "Eye", 
         options: {
           displayName: "Eye",
-        }
-      },
-      { name: "05 Ear",
-        type: "Ear", 
-        options: {
-          displayName: "Ear",
         }
       },
       { name: "04 Eye Glasses",
@@ -115,7 +115,7 @@ const layerConfigurations = [
       { name: "02 Nose",
         type: "Nose", 
         options: {
-          displayName: "Noze",
+          displayName: "Nose",
         }
       },
       { name: "01 Hat Helmet",
@@ -130,11 +130,11 @@ const layerConfigurations = [
 
 const shuffleLayerConfigurations = false;
 
-const debugLogs = true;
+const debugLogs = false;
 
 const format = {
-  width: 512,
-  height: 512,
+  width: 1024,
+  height: 1024,
   smoothing: false,
 };
 

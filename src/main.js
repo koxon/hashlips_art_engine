@@ -29,8 +29,6 @@ ctx.imageSmoothingEnabled = format.smoothing;
 var metadataList = [];
 var attributesList = [];
 var dnaList = new Set();
-var denyList = {};
-var allowList = {};
 const DNA_DELIMITER = "-";
 const HashlipsGiffer = require(`${basePath}/modules/HashlipsGiffer.js`);
 
@@ -71,7 +69,7 @@ const cleanName = (_str) => {
   return nameWithoutWeight;
 };
 
-const getElements = (path) => {
+const getElements = (path, type) => {
   return fs
     .readdirSync(path)
     .filter((item) => !/(^|\/)\.[^\/\.]/g.test(item))
@@ -88,10 +86,11 @@ const getElements = (path) => {
       return {
         id: index,
         fileParts: fileParts,
-        fileId: fileParts[1],
+        fileId: (fileParts[1] == undefined && fileParts[0] == "none")?"none":fileParts[1],
         denies: fileParts[2],
         allows: fileParts[3],
         name: fileParts[0],
+        type: type,
         filename: i,
         path: `${path}${i}`,
         weight: getRarityWeight(i),
@@ -102,7 +101,7 @@ const getElements = (path) => {
 const layersSetup = (layersOrder) => {
   const layers = layersOrder.map((layerObj, index) => ({
     id: index,
-    elements: getElements(`${layersDir}/${layerObj.name}/`),
+    elements: getElements(`${layersDir}/${layerObj.name}/`, layerObj.type.toLowerCase()),
     name:
       layerObj.options?.["displayName"] != undefined
         ? layerObj.options?.["displayName"]
@@ -110,7 +109,7 @@ const layersSetup = (layersOrder) => {
     type:
       layerObj.options?.["type"] != undefined
         ? layerObj.options?.["type"]
-        : layerObj.type,
+        : layerObj.type.toLowerCase(),
     blend:
       layerObj.options?.["blend"] != undefined
         ? layerObj.options?.["blend"]
@@ -301,27 +300,147 @@ const isDnaUnique = (_DnaList = new Set(), _dna = "") => {
   return !_DnaList.has(_filteredDNA);
 };
 
+// Search if element is denied or not
+const isElementInDeniedList = (type, list, fileId, exceptions) => {
+  type = type.toLowerCase();
+
+  for (var i = 0; i < exceptions.length; i++) {
+    if (exceptions[i].type != type)
+      continue;
+  
+    if (list.includes(exceptions[i].fileId)) {
+      debugLogs
+      ? console.log("ELEM is in exception list: " + type + " / " + fileId)
+      : null;
+      return true;
+    }
+  }
+
+  return false;
+};
+
+// Is the element denied by previous rules ?
+const isDenied = (denied, type, fileId) => {
+  if (!denied[type] || denied[type] == undefined)
+    return false;
+
+  if (denied[type].includes(fileId))
+    return true;
+    
+  return false;
+};
+
+// Is the element allowed by previous rules
+const isAllowed = (allowed, type, fileId) => {
+  if (!allowed[type] || allowed[type] == undefined)
+    return true;
+
+  if (allowed[type].includes(fileId))
+    return true;
+    
+  return false
+};
+
+ // Save exceptions for easy lookup
+const recordExceptions = (rules, exceptions) => {
+  for (var i = 0; i < rules.length; i++) {
+    var rule = rules[i].split("=");
+    var type = rule[0];
+    var list = rule[1].split("_");
+
+    if (exceptions[type] == undefined) {
+      exceptions[type] = [];
+    }
+
+    exceptions[type] = exceptions[type].concat(list);
+  }
+};
+
+const pickElement = (layer, randNum, allowed, denied) => {
+  var totalWeight = 0;
+
+  layer.elements.forEach((element) => {
+    totalWeight += element.weight;
+  });
+
+  // number between 0 - totalWeight
+  let random = Math.floor(Math.random() * totalWeight);
+  for (var i = 0; i < layer.elements.length; i++) {
+    // subtract the current weight from the random weight until we reach a sub zero value.
+    random -= layer.elements[i].weight;
+    if (random < 0) {
+      //console.log(layer.elements[i]);
+
+      if (Object.keys(denied).length && isDenied(denied, layer.elements[i].type, layer.elements[i].fileId)) {
+        debugLogs
+        ? console.log("DENIED: " + layer.elements[i].type + ":" + layer.elements[i].fileId)
+        : null;
+        return randNum;
+      }
+
+      if (Object.keys(allowed).length && !isAllowed(allowed, layer.elements[i].type, layer.elements[i].fileId)) {
+        debugLogs
+        ? console.log("NOT ALLOWED: " + layer.elements[i].type + ":" + layer.elements[i].fileId)
+        : null;
+        return randNum;
+      }
+
+      // Record denies and allows for futur layers
+      if (layer.elements[i].denies != undefined && 
+          layer.elements[i].denies != '') {
+        let rules = layer.elements[i].denies.split(",");
+
+        if (rules.length) {
+          recordExceptions(rules, denied);
+          debugLogs
+          ? (console.log("RECORD new DENY exception") && console.log(denied))
+          : null;
+        }
+      }
+
+      if (layer.elements[i].allows != undefined && 
+          layer.elements[i].allows != '') {
+        let rules = layer.elements[i].allows.split(",");
+
+        if (rules.length) {
+          recordExceptions(rules, allowed);
+          debugLogs
+          ? (console.log("RECORD new ALLOW exception") && console.log(allowed))
+          : null;
+        }
+      }
+
+      randNum.push(
+        `${layer.elements[i].id}:${layer.elements[i].filename}${
+          layer.bypassDNA ? "?bypassDNA=true" : ""
+        }`
+      );
+
+      return randNum;
+    }
+  }
+};
+
 const createDna = (_layers) => {
   let randNum = [];
-  _layers.forEach((layer) => {
-    var totalWeight = 0;
-    layer.elements.forEach((element) => {
-      totalWeight += element.weight;
-    });
-    // number between 0 - totalWeight
-    let random = Math.floor(Math.random() * totalWeight);
-    for (var i = 0; i < layer.elements.length; i++) {
-      // subtract the current weight from the random weight until we reach a sub zero value.
-      random -= layer.elements[i].weight;
-      if (random < 0) {
-        return randNum.push(
-          `${layer.elements[i].id}:${layer.elements[i].filename}${
-            layer.bypassDNA ? "?bypassDNA=true" : ""
-          }`
-        );
-      }
+  let allowed = {};
+  let denied = {};
+
+  var size = 0;
+  for (var l = 0; l < _layers.length; l++) {
+    debugLogs
+    ? console.log((l+1) + " PROCESSING LAYER: " + _layers[l].name)
+    : null;
+    
+    // Loop until we get an appropriate element
+    while (randNum.length == size) {
+      randNum = pickElement(_layers[l], randNum, allowed, denied);
+      // console.log("Denies: " + denied);
+      // console.log("Allows: " + allowed);
     }
-  });
+    size++;
+  }
+  
   return randNum.join(DNA_DELIMITER);
 };
 
@@ -385,24 +504,40 @@ const startCreating = async () => {
       if (isDnaUnique(dnaList, newDna)) {
         let results = constructLayerToDna(newDna, layers);
         let loadedElements = [];
-        let types = {};
+        let typesDone = {};
 
         results.forEach((layer) => {
-          if (types[layer.type] == 1) {
-            // console.log("ignore");
-            // console.log(layer);
-            return;
-          }
-          console.log(layer);
+          // Can be multiple types for a layer
+          var type = layer.type.split(",");
+          var skip = false;
+          type.forEach(element => {
+            // We already applied this type of trait
+            if (typesDone[element]) {
+              debugLogs
+              ? console.log("TYPE Already applied .. ignoring: " + element)
+              : null;
+              // Mark this layer for skipping
+              skip = true;
+              return;
+            }
 
-          if (layer.selectedElement.name != 'none') {
-            types[layer.type] = 1;
-          }
+            // Remembering the type we're going to process
+            if (layer.selectedElement.name != 'none') {
+              typesDone[element] = 1;
+            }
+
+          });
+          
+          // Skipping this layer if flag is true. Because we already processed a similar type.
+          if (skip)
+            return;
+
+          // Pushing layer
           loadedElements.push(loadLayerImg(layer));
 
         });
 
-        console.log(types);
+        //console.log(typesDone);
 
         await Promise.all(loadedElements).then((renderObjectArray) => {
           debugLogs ? console.log("Clearing canvas") : null;
