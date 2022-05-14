@@ -6,7 +6,7 @@ const network = NETWORK.eth;
 
 // General metadata for Ethereum
 const namePrefix = "Fry Heads";
-const description = "Fries in a parallel universe";
+const description = "Fry Heads from a parallel universe are coming on earth to help raise funds for charity. How nice! ... Will you help them?";
 const baseUri = "ipfs://QmXgGkWXWoFADKfoNc1S48Z6hRqJrRBcBNVabTSCd66gSR";
 
 const solanaMetadata = {
@@ -24,7 +24,7 @@ const solanaMetadata = {
 // If you have selected Solana then the collection starts from 0 automatically
 const layerConfigurations = [
   {
-    growEditionSizeTo: 300,
+    growEditionSizeTo: 10000,
     layersOrder: [
       { name: "16 Background",
         type: "Background", 
@@ -170,7 +170,7 @@ const background = {
 };
 
 const extraMetadata = {
-  external_url: "https://stickhumans.com"
+  external_url: "https://fryheads.com"
 };
 
 const rarityDelimiter = "#";
