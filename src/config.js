@@ -106,6 +106,12 @@ const layerConfigurations = [
           displayName: "Eye Glasses",
         }
       },
+      { name: "03bis Mouth Over Eyes",
+        type: "Mouth", 
+        options: {
+          displayName: "Special Mouth",
+        }
+      },
       { name: "03 Hat Cap",
         type: "Hat", 
         options: {
@@ -130,7 +136,7 @@ const layerConfigurations = [
 
 const shuffleLayerConfigurations = false;
 
-const debugLogs = false;
+const debugLogs = true;
 
 const format = {
   width: 1024,
