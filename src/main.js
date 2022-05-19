@@ -356,15 +356,31 @@ const recordExceptions = (type, list, exceptions) => {
 
 // Check deny rules against already selected elements
 const checkDenyRulesAgainstSelectedElems = (type, list, selectedElems) => {
+  for (let i = 0; i < selectedElems.length; i++) {
+    if (selectedElems[i].type != type || selectedElems[i].name == 'none') 
+      continue;
 
+    if (list.includes(selectedElems[i].fileId))
+      return false;
+  }
+
+  return true;
 }
 
 // Check allow rules against already selected elements
 const checkAllowRulesAgainstSelectedElems = (type, list, selectedElems) => {
+  for (let i = 0; i < selectedElems.length; i++) {
+    if (selectedElems[i].type != type || selectedElems[i].name == 'none') 
+      continue;
 
+    if (!list.includes(selectedElems[i].fileId))
+      return false;
+  }
+
+  return true;
 }
 
-const pickElement = (layer, randNum, selectedElems, allowed, denied) => {
+const pickElement = (layer, values, allowed, denied) => {
   let totalWeight = 0;
 
   layer.elements.forEach((element) => {
@@ -384,7 +400,7 @@ const pickElement = (layer, randNum, selectedElems, allowed, denied) => {
         debugLogs
         ? console.log("DENIED: " + layer.elements[i].type + ":" + layer.elements[i].fileId)
         : null;
-        return randNum;
+        return values;
       }
 
       // Is this File requested in past elements? If yes we return the same array for a retry
@@ -392,33 +408,31 @@ const pickElement = (layer, randNum, selectedElems, allowed, denied) => {
         debugLogs
         ? console.log("NOT ALLOWED: " + layer.elements[i].type + ":" + layer.elements[i].fileId)
         : null;
-        return randNum;
+        return values;
       }
-
-      // Are the allows of the new element in conflict with what is already picked?
-      // This way we can cancel based if previously picked element can't work with this one
 
       // Record denies and allows for futur layers
       if (layer.elements[i].denies != undefined && 
           layer.elements[i].denies != '') {
-        let rules = layer.elements[i].denies.split(",");
 
+        let rules = layer.elements[i].denies.split(",");
         if (rules.length) {
-          for (let i = 0; i < rules.length; i++) {
-            let rule = rules[i].split("=");
+          for (let j = 0; j < rules.length; j++) {
+            let rule = rules[j].split("=");
             let type = rule[0];
             let list = rule[1].split("_");
 
             // Let's checks if those deny rules are not in conflict with previously selected items
-            if (!checkDenyRulesAgainstSelectedElems(type, list, selectedElems)) {
+            if (!checkDenyRulesAgainstSelectedElems(type, list, values.selectedElems)) {
               debugLogs
               ? (console.log("DENIED FROM PREVIOUS SELECTION: " + layer.elements[i].type + ":" + layer.elements[i].fileId))
               : null;
-              return randNum;
+              return values;
             }
 
             // Record those rules for futur elements
             recordExceptions(type, list, denied);
+
             debugLogs
             ? (console.log("RECORD new DENY exception") && console.log(denied))
             : null;
@@ -429,24 +443,25 @@ const pickElement = (layer, randNum, selectedElems, allowed, denied) => {
       // Our new element has some allow rules!
       if (layer.elements[i].allows != undefined && 
           layer.elements[i].allows != '') {
-        let rules = layer.elements[i].allows.split(",");
 
+        let rules = layer.elements[i].allows.split(",");
         if (rules.length) {
-          for (let i = 0; i < rules.length; i++) {
-            let rule = rules[i].split("=");
+          for (let j = 0; j < rules.length; j++) {
+            let rule = rules[j].split("=");
             let type = rule[0];
             let list = rule[1].split("_");
 
             // Let's checks if those allow rules are not in conflict with previously selected items
-            if (!checkAllowRulesAgainstSelectedElems(type, list, selectedElems)) {
+            if (!checkAllowRulesAgainstSelectedElems(type, list, values.selectedElems)) {
               debugLogs
               ? (console.log("NOT ALLOWED FROM PREVIOUS SELECTION: " + layer.elements[i].type + ":" + layer.elements[i].fileId))
               : null;
-              return randNum;
+              return values;
             }
 
             // Record those rules for futur elements
             recordExceptions(type, list, allowed);
+
             debugLogs
             ? (console.log("RECORD new ALLOW exception") && console.log(allowed))
             : null;
@@ -455,27 +470,26 @@ const pickElement = (layer, randNum, selectedElems, allowed, denied) => {
       }
 
       // Push layer syntax (id:filename) into the array of selected elements to by drawn 
-      randNum.push(
+      values.randNum.push(
         `${layer.elements[i].id}:${layer.elements[i].filename}${
           layer.bypassDNA ? "?bypassDNA=true" : ""
         }`
       );
 
       // Store the whole selected element for future lookups
-      selectedElems.push(layer.elements[i]);
+      values.selectedElems.push(layer.elements[i]);
 
       debugLogs
       ? (console.log(JSON.stringify(layer.elements[i])))
       : null;
 
-      return ({"randNum": randNum, "selectedElems": selectedElems});
+      return (values);
     }
   }
 };
 
 const createDna = (_layers) => {
-  let randNum = [];
-  let selectedElems = [];
+  let values = {"randNum": [], "selectedElems": []};
   let allowed = {};
   let denied = {};
 
@@ -486,19 +500,15 @@ const createDna = (_layers) => {
     : null;
     
     // Loop until we get an appropriate element
-    while (randNum.length == size) {
-      if (randNum = pickElement(_layers[l], randNum, selectedElems, allowed, denied)) {
-        // The generation has been canceled we reset the array
-        randNum = [];
-        selectedElems = [];
-      }
+    while (values.randNum.length == size) { 
+      values = pickElement(_layers[l], values, allowed, denied);
       // console.log("Denies: " + denied);
       // console.log("Allows: " + allowed);
     }
     size++;
   }
   
-  return randNum.join(DNA_DELIMITER);
+  return values.randNum.join(DNA_DELIMITER);
 };
 
 const writeMetaData = (_data) => {
