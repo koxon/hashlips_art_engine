@@ -6,8 +6,9 @@ const network = NETWORK.eth;
 
 // General metadata for Ethereum
 const namePrefix = "Fry Heads";
-const description = "Fry Heads from a parallel universe are coming on earth to help raise funds for charity. How nice! ... Will you help them?";
-const baseUri = "ipfs://QmXgGkWXWoFADKfoNc1S48Z6hRqJrRBcBNVabTSCd66gSR";
+const description = "NFT from a parallel universe helping to raise money for charity in perpetuity.";
+// CID for images
+const baseUri = "ipfs://QmSrkHWoPqz6EXZtg5PVS3BE6SY4Dxz5QudNNdVstQwUcb";
 
 const solanaMetadata = {
   symbol: "YC",
@@ -16,7 +17,7 @@ const solanaMetadata = {
   creators: [
     {
       address: "7fXNuer5sbZtaTEPhtJ5g5gNtuyRoKkvxdjEjEnPN4mC",
-      share: 100,
+      share: 0,
     },
   ],
 };
@@ -24,7 +25,7 @@ const solanaMetadata = {
 // If you have selected Solana then the collection starts from 0 automatically
 const layerConfigurations = [
   {
-    growEditionSizeTo: 10000,
+    growEditionSizeTo: 20,
     layersOrder: [
       { name: "16 Background",
         type: "Background", 
