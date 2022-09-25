@@ -500,8 +500,16 @@ const createDna = (_layers) => {
     : null;
     
     // Loop until we get an appropriate element
+    var repeats = 0;
     while (values.randNum.length == size) { 
+      if (repeats == 300) {
+        console.log(
+          `300 retries. Rule failed`
+        );
+        process.exit();
+      }
       values = pickElement(_layers[l], values, allowed, denied);
+      repeats++;
       // console.log("Denies: " + denied);
       // console.log("Allows: " + allowed);
     }

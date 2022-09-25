@@ -12,7 +12,7 @@ const baseUri = "ipfs://QmSrkHWoPqz6EXZtg5PVS3BE6SY4Dxz5QudNNdVstQwUcb";
 
 const solanaMetadata = {
   symbol: "YC",
-  seller_fee_basis_points: 1000, // Define how much % you want from secondary market sales 1000 = 10%
+  seller_fee_basis_points: 0, // Define how much % you want from secondary market sales 1000 = 10%
   external_url: "https://www.youtube.com/c/hashlipsnft",
   creators: [
     {
@@ -25,7 +25,7 @@ const solanaMetadata = {
 // If you have selected Solana then the collection starts from 0 automatically
 const layerConfigurations = [
   {
-    growEditionSizeTo: 20,
+    growEditionSizeTo: 1000,
     layersOrder: [
       { name: "16 Background",
         type: "Background", 
