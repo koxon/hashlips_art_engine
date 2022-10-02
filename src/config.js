@@ -60,7 +60,7 @@ const layerConfigurations = [
         }
       },
       { name: "11 Hat & Eye - Without Ears & Hat & nose",
-        type: "Hat,Eye", 
+        type: "Eye", 
         options: {
           displayName: "Special Hat",
         }

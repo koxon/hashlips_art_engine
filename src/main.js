@@ -1,5 +1,6 @@
 const basePath = process.cwd();
 const { NETWORK } = require(`${basePath}/constants/network.js`);
+const { triggerAsyncId } = require("async_hooks");
 const fs = require("fs");
 const { nextTick } = require("process");
 const sha1 = require(`${basePath}/node_modules/sha1`);
@@ -300,88 +301,126 @@ const isDnaUnique = (_DnaList = new Set(), _dna = "") => {
   return !_DnaList.has(_filteredDNA);
 };
 
-// Search if element is denied or not
-const isElementInDeniedList = (type, list, fileId, exceptions) => {
-  type = type.toLowerCase();
-
-  for (let i = 0; i < exceptions.length; i++) {
-    if (exceptions[i].type != type)
-      continue;
-  
-    if (list.includes(exceptions[i].fileId)) {
-      debugLogs
-      ? console.log("ELEM is in exception list: " + type + " / " + fileId)
-      : null;
-      return true;
-    }
-  }
-
-  return false;
-};
-
 // Is the element denied by previous rules ?
 const isDenied = (denied, type, fileId) => {
-  if (!denied[type] || denied[type] == undefined)
-    return false;
+  let types = type.split(",");
+  let deny = false;
+  types.forEach(element => {
+    if (denied && denied[element] && denied[element].includes('*'))
+      deny = true;
 
-  if (denied[type].includes('*'))
-    return true;
+    if (denied && denied[element] && denied[element].includes(fileId))
+      deny = true;
 
-  if (denied[type].includes(fileId))
-    return true;
+    // If tested file is none and we allowed the nones 
+    if (denied && denied[element] && fileId == 10000 && denied[element].includes('none'))
+      deny = true;
+  });
     
-  return false;
+  return deny;
 };
 
 // Is the element allowed by previous rules
 const isAllowed = (allowed, type, fileId) => {
-  // Not denied and no allow list
-  if (!allowed[type] || allowed[type] == undefined)
-    return true;
+  let types = type.split(",");
+  let allow = false;
+  types.forEach(element => {
+    // Not denied and no allow list
+    if (!allowed || !allowed[element] || allowed[element] == undefined)
+      allow = true;
 
-  if (allowed[type].includes(fileId))
-    return true;
+    if (allowed && allowed[element] && allowed[element].includes(fileId))
+      allow = true;
+
+    // If tested file is none and we allowed the nones 
+    if (allowed && allowed[element] && fileId == 10000 && allowed[element].includes('none'))
+      allow = true;
+  });
     
-  return false
+  return allow;
 };
 
  // Save exceptions for easy lookup
 const recordExceptions = (type, list, exceptions) => {
-    if (exceptions[type] == undefined) {
-      exceptions[type] = [];
-    }
-
-    exceptions[type] = exceptions[type].concat(list);
+  if (exceptions[type] == undefined) {
+    exceptions[type] = [];
+  }
+  exceptions[type] = exceptions[type].concat(list);
+  console.log("ADDING Exception for type: " + type + " : " + list);
 };
 
-// Check deny rules against already selected elements
-const checkDenyRulesAgainstSelectedElems = (type, list, selectedElems) => {
-  for (let i = 0; i < selectedElems.length; i++) {
-    if (selectedElems[i].type != type || selectedElems[i].name == 'none') 
-      continue;
-
-    if (list.includes(selectedElems[i].fileId))
-      return false;
-  }
-
-  return true;
-}
-
 // Check allow rules against already selected elements
-const checkAllowRulesAgainstSelectedElems = (type, list, selectedElems) => {
+const isDeniedAgainstSelectedElems = (type, list, selectedElems, typesDone) => {  
   for (let i = 0; i < selectedElems.length; i++) {
-    if (selectedElems[i].type != type || selectedElems[i].name == 'none') 
-      continue;
 
-    if (!list.includes(selectedElems[i].fileId))
-      return false;
+    let types = selectedElems[i].type.split(",");
+    for (let j = 0; j < types.length; j++) {
+      if (types[j] != type) 
+        continue;
+
+      if (!typesDone[type] && list == 'none') {
+        console.log("Type '" + type + "' is still none and we deny 'none' for this type.");
+        return true;
+      }
+
+      if (list.includes(selectedElems[i].fileId)) {
+        console.log("is in previous selection: " + JSON.stringify(selectedElems[i]));
+        return true;
+      }
+    }
   }
 
-  return true;
+  return false;
 }
 
-const pickElement = (layer, values, allowed, denied) => {
+const isAllowedAgainstSelectedElems = (type, list, selectedElems, typesDone) => {  
+  for (let i = 0; i < selectedElems.length; i++) {
+
+    let types = selectedElems[i].type.split(",");
+    for (let j = 0; j < types.length; j++) {
+      if (types[j] != type) 
+        continue;
+
+      if (!typesDone[type] && list == 'none') {
+        console.log("Type '" + type + "' is still none and we allow only if none for this type.");
+        return true;
+      }
+
+      if (list.includes(selectedElems[i].fileId)) {
+        console.log("is in previous selection: " + JSON.stringify(selectedElems[i]));
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+const isTypeProcessed = (type, typesDone) => {
+  let types = type.split(",");
+  types.forEach(element => {
+    if (typesDone[element])
+      return true;
+  });
+  return false;
+}
+
+const saveTypesDone = (name, type, typesDone) => {
+  if (name != 'none') {
+    let types = type.split(",");
+    types.forEach(element => {
+      debugLogs
+      ? (console.log("LAYER DONE (Type): " + element))
+      : null;
+      typesDone[element] = 1;
+    });
+  }
+}
+
+const pickElement = (layer, values, allowed, denied, typesDone) => {
   let totalWeight = 0;
+  let toAllowRecord = [];
+  let toDenyRecord = [];
 
   layer.elements.forEach((element) => {
     totalWeight += element.weight;
@@ -390,15 +429,19 @@ const pickElement = (layer, values, allowed, denied) => {
   // number between 0 - totalWeight
   let random = Math.floor(Math.random() * totalWeight);
   for (let i = 0; i < layer.elements.length; i++) {
+    // debugLogs
+    // ? console.log("-------------------------------\n Try layer " + i + ": \n" + JSON.stringify(layer.elements[i]))
+    // : null;
+
     // subtract the current weight from the random weight until we reach a sub zero value.
     random -= layer.elements[i].weight;
     if (random < 0) {
-      //console.log(layer.elements[i]);
+      console.log("--------------------\nTrying element:\n" + JSON.stringify(layer.elements[i]));
 
       // Is this File denied in past elements? If yes we return the same array for a retry
       if (Object.keys(denied).length && isDenied(denied, layer.elements[i].type, layer.elements[i].fileId)) {
         debugLogs
-        ? console.log("DENIED: " + layer.elements[i].type + ":" + layer.elements[i].fileId)
+        ? console.log(" - DENIED: " + layer.elements[i].type + ":" + layer.elements[i].fileId)
         : null;
         return values;
       }
@@ -406,13 +449,14 @@ const pickElement = (layer, values, allowed, denied) => {
       // Is this File requested in past elements? If yes we return the same array for a retry
       if (Object.keys(allowed).length && !isAllowed(allowed, layer.elements[i].type, layer.elements[i].fileId)) {
         debugLogs
-        ? console.log("NOT ALLOWED: " + layer.elements[i].type + ":" + layer.elements[i].fileId)
+        ? console.log(" - NOT ALLOWED: " + layer.elements[i].type + ":" + layer.elements[i].fileId)
         : null;
         return values;
       }
 
       // Record denies and allows for futur layers
-      if (layer.elements[i].denies != undefined && 
+      if (!isTypeProcessed(layer.elements[i].type, typesDone) &&
+          layer.elements[i].denies != undefined && 
           layer.elements[i].denies != '') {
 
         let rules = layer.elements[i].denies.split(",");
@@ -423,25 +467,22 @@ const pickElement = (layer, values, allowed, denied) => {
             let list = rule[1].split("_");
 
             // Let's checks if those deny rules are not in conflict with previously selected items
-            if (!checkDenyRulesAgainstSelectedElems(type, list, values.selectedElems)) {
+            if (isDeniedAgainstSelectedElems(type, list, values.selectedElems, typesDone)) {
               debugLogs
-              ? (console.log("DENIED FROM PREVIOUS SELECTION: " + layer.elements[i].type + ":" + layer.elements[i].fileId))
+              ? (console.log(" - DENIED FROM PREVIOUS SELECTION: " + layer.elements[i].type + ":" + layer.elements[i].fileId))
               : null;
               return values;
             }
 
-            // Record those rules for futur elements
-            recordExceptions(type, list, denied);
-
-            debugLogs
-            ? (console.log("RECORD new DENY exception") && console.log(denied))
-            : null;
+            // Save to record if it passes all checks
+            toDenyRecord.push({type: type, list: list});
           }
         }
       }
 
       // Our new element has some allow rules!
-      if (layer.elements[i].allows != undefined && 
+      if (!isTypeProcessed(layer.elements[i].type, typesDone) &&
+          layer.elements[i].allows != undefined && 
           layer.elements[i].allows != '') {
 
         let rules = layer.elements[i].allows.split(",");
@@ -452,19 +493,15 @@ const pickElement = (layer, values, allowed, denied) => {
             let list = rule[1].split("_");
 
             // Let's checks if those allow rules are not in conflict with previously selected items
-            if (!checkAllowRulesAgainstSelectedElems(type, list, values.selectedElems)) {
+            if (!isAllowedAgainstSelectedElems(type, list, values.selectedElems, typesDone)) {
               debugLogs
-              ? (console.log("NOT ALLOWED FROM PREVIOUS SELECTION: " + layer.elements[i].type + ":" + layer.elements[i].fileId))
+              ? (console.log(" - NOT ALLOWED FROM PREVIOUS SELECTION: " + layer.elements[i].type + ":" + layer.elements[i].fileId))
               : null;
               return values;
             }
 
-            // Record those rules for futur elements
-            recordExceptions(type, list, allowed);
-
-            debugLogs
-            ? (console.log("RECORD new ALLOW exception") && console.log(allowed))
-            : null;
+            // Save to record if it passes all checks
+            toAllowRecord.push({type: type, list: list});
           }
         }
       }
@@ -475,13 +512,30 @@ const pickElement = (layer, values, allowed, denied) => {
           layer.bypassDNA ? "?bypassDNA=true" : ""
         }`
       );
-
-      // Store the whole selected element for future lookups
       values.selectedElems.push(layer.elements[i]);
 
+      saveTypesDone(layer.elements[i].name, layer.elements[i].type, typesDone);
+
+      // Record Deny rules
+      toDenyRecord.forEach(element => {
+        recordExceptions(element.type, element.list, denied);
+      });
+      // Record allow rules
+      toAllowRecord.forEach(element => {
+        recordExceptions(element.type, element.list, allowed);
+      });
+
+      // Store the whole selected element for future lookups      
       debugLogs
-      ? (console.log(JSON.stringify(layer.elements[i])))
+      ? (console.log("Pushing: " + JSON.stringify(layer.elements[i]) + "\n--------------------"))
       : null;
+
+      // debugLogs
+      // ? (console.log("Denies: " + layer.elements[i].denies))
+      // : null;
+      // debugLogs
+      // ? (console.log("Allows: " + layer.elements[i].allows))
+      // : null;
 
       return (values);
     }
@@ -492,6 +546,7 @@ const createDna = (_layers) => {
   let values = {"randNum": [], "selectedElems": []};
   let allowed = {};
   let denied = {};
+  let typesDone = {};
 
   let size = 0;
   for (let l = 0; l < _layers.length; l++) {
@@ -502,20 +557,18 @@ const createDna = (_layers) => {
     // Loop until we get an appropriate element
     var repeats = 0;
     while (values.randNum.length == size) { 
-      if (repeats == 300) {
+      if (repeats == 10000) {
         console.log(
-          `300 retries. Rule failed`
+          `10000 retries. Rule failed`
         );
         process.exit();
       }
-      values = pickElement(_layers[l], values, allowed, denied);
+      values = pickElement(_layers[l], values, allowed, denied, typesDone);
       repeats++;
-      // console.log("Denies: " + denied);
-      // console.log("Allows: " + allowed);
     }
     size++;
   }
-  
+
   return values.randNum.join(DNA_DELIMITER);
 };
 
@@ -598,6 +651,7 @@ const startCreating = async () => {
 
             // Remembering the type we're going to process
             if (layer.selectedElement.name != 'none') {
+              console.log("TYPES DONE: " + layer.selectedElement.name )
               typesDone[element] = 1;
             }
           });
