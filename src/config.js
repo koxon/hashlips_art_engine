@@ -56,7 +56,7 @@ const layerConfigurations = [
       { name: "12 Mouth - Under Hat",
         type: "Mouth", 
         options: {
-          displayName: "Special Mouth",
+          displayName: "Special Mouth 2",
         }
       },
       { name: "11 Hat & Eye - Without Ears & Hat & nose",

@@ -346,7 +346,6 @@ const recordExceptions = (type, list, exceptions) => {
     exceptions[type] = [];
   }
   exceptions[type] = exceptions[type].concat(list);
-  console.log("ADDING Exception for type: " + type + " : " + list);
 };
 
 // Check allow rules against already selected elements
@@ -518,10 +517,12 @@ const pickElement = (layer, values, allowed, denied, typesDone) => {
 
       // Record Deny rules
       toDenyRecord.forEach(element => {
+        console.log("ADDING Deny Exceptions for type: " + element.type + " : " + element.list);
         recordExceptions(element.type, element.list, denied);
       });
       // Record allow rules
       toAllowRecord.forEach(element => {
+        console.log("ADDING Allow Exceptions for type: " + element.type + " : " + element.list);
         recordExceptions(element.type, element.list, allowed);
       });
 
