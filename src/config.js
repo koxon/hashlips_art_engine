@@ -5,18 +5,18 @@ const { NETWORK } = require(`${basePath}/constants/network.js`);
 const network = NETWORK.eth;
 
 // General metadata for Ethereum
-const namePrefix = "Fry Heads";
-const description = "NFT from a parallel universe helping to raise money for charity in perpetuity.";
+const namePrefix = "Fry Heads NFT";
+const description = "Charitable NFTs in perpetuity.";
 // CID for images
 const baseUri = "ipfs://QmSrkHWoPqz6EXZtg5PVS3BE6SY4Dxz5QudNNdVstQwUcb";
 
 const solanaMetadata = {
   symbol: "YC",
   seller_fee_basis_points: 0, // Define how much % you want from secondary market sales 1000 = 10%
-  external_url: "https://www.youtube.com/c/hashlipsnft",
+  external_url: "https://fryheads.com",
   creators: [
     {
-      address: "7fXNuer5sbZtaTEPhtJ5g5gNtuyRoKkvxdjEjEnPN4mC",
+      address: "0x9b84b6Fe443d57c43C7Ff0a2A48650bFEe00227b",
       share: 0,
     },
   ],
@@ -25,7 +25,7 @@ const solanaMetadata = {
 // If you have selected Solana then the collection starts from 0 automatically
 const layerConfigurations = [
   {
-    growEditionSizeTo: 1000,
+    growEditionSizeTo: 10000,
     layersOrder: [
       { name: "16 Background",
         type: "Background", 
@@ -56,7 +56,7 @@ const layerConfigurations = [
       { name: "12 Mouth - Under Hat",
         type: "Mouth", 
         options: {
-          displayName: "Special Mouth 2",
+          displayName: "Special Mouth",
         }
       },
       { name: "11 Hat & Eye - Without Ears & Hat & nose",
@@ -74,7 +74,7 @@ const layerConfigurations = [
       { name: "09 Hat",
         type: "Hat", 
         options: {
-          displayName: "Hat",
+          displayName: "Hat & Hair",
         }
       },
       { name: "08 Ear",
@@ -110,7 +110,7 @@ const layerConfigurations = [
       { name: "03bis Mouth Over Eyes",
         type: "Mouth", 
         options: {
-          displayName: "Special Mouth",
+          displayName: "Special Mouth 2",
         }
       },
       { name: "03 Hat Cap",
